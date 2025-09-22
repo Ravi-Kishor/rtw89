@@ -88,6 +88,7 @@ struct rtw89_debugfs {
 	struct rtw89_debugfs_priv stations;
 	struct rtw89_debugfs_priv disable_dm;
 	struct rtw89_debugfs_priv mlo_mode;
+	struct rtw89_debugfs_priv beacon_info;
 };
 
 struct rtw89_debugfs_iter_data {
@@ -4349,6 +4350,64 @@ rtw89_debug_priv_mlo_mode_set(struct rtw89_dev *rtwdev,
 	return count;
 }
 
+static ssize_t
+rtw89_debug_priv_beacon_info_get(struct rtw89_dev *rtwdev,
+				 struct rtw89_debugfs_priv *debugfs_priv,
+				 char *buf, size_t bufsz)
+{
+	struct rtw89_pkt_stat *pkt_stat = &rtwdev->phystat.last_pkt_stat;
+	struct rtw89_beacon_track_info *bcn_track = &rtwdev->bcn_track;
+	struct rtw89_beacon_stat *bcn_stat = &rtwdev->phystat.bcn_stat;
+	struct rtw89_beacon_dist *bcn_dist = &bcn_stat->bcn_dist;
+	u16 upper, lower = bcn_stat->tbtt_tu_min;
+	char *p = buf, *end = buf + bufsz;
+	u16 *drift = bcn_stat->drift;
+	u8 bcn_num = bcn_stat->num;
+	u8 count;
+	u8 i;
+
+	p += scnprintf(p, end - p, "[Beacon info]\n");
+	p += scnprintf(p, end - p, "count: %u\n", pkt_stat->beacon_nr);
+	p += scnprintf(p, end - p, "interval: %u\n", bcn_track->beacon_int);
+	p += scnprintf(p, end - p, "dtim: %u\n", bcn_track->dtim);
+	p += scnprintf(p, end - p, "raw rssi: %lu\n",
+		       ewma_rssi_read(&rtwdev->phystat.bcn_rssi));
+	p += scnprintf(p, end - p, "hw rate: %u\n", pkt_stat->beacon_rate);
+	p += scnprintf(p, end - p, "length: %u\n", pkt_stat->beacon_len);
+
+	p += scnprintf(p, end - p, "\n[Distribution]\n");
+	p += scnprintf(p, end - p, "tbtt\n");
+	for (i = 0; i < RTW89_BCN_TRACK_MAX_BIN_NUM; i++) {
+		upper = lower + RTW89_BCN_TRACK_BIN_WIDTH - 1;
+		if (i == RTW89_BCN_TRACK_MAX_BIN_NUM - 1)
+			upper = max(upper, bcn_stat->tbtt_tu_max);
+
+		p += scnprintf(p, end - p, "%02u - %02u: %u\n",
+			       lower, upper, bcn_dist->bins[i]);
+
+		lower = upper + 1;
+	}
+
+	p += scnprintf(p, end - p, "\ndrift\n");
+
+	for (i = 0; i < bcn_num; i += count) {
+		count = 1;
+		while (i + count < bcn_num && drift[i] == drift[i + count])
+			count++;
+
+		p += scnprintf(p, end - p, "%u: %u\n", drift[i], count);
+	}
+	p += scnprintf(p, end - p, "\nlower bound: %u\n", bcn_dist->lower_bound);
+	p += scnprintf(p, end - p, "upper bound: %u\n", bcn_dist->upper_bound);
+	p += scnprintf(p, end - p, "outlier count: %u\n", bcn_dist->outlier_count);
+
+	p += scnprintf(p, end - p, "\n[Tracking]\n");
+	p += scnprintf(p, end - p, "tbtt offset: %u\n", bcn_track->tbtt_offset);
+	p += scnprintf(p, end - p, "bcn timeout: %u\n", bcn_track->bcn_timeout);
+
+	return p - buf;
+}
+
 #define rtw89_debug_priv_get(name, opts...)			\
 {								\
 	.cb_read = rtw89_debug_priv_ ##name## _get,		\
@@ -4401,6 +4460,7 @@ static const struct rtw89_debugfs rtw89_debugfs_templ = {
 	.btc_info = rtw89_debug_priv_get(btc_info, RSIZE_12K),
 	.btc_manual = rtw89_debug_priv_set(btc_manual),
 	.phy_info = rtw89_debug_priv_get(phy_info),
+	.beacon_info = rtw89_debug_priv_get(beacon_info),
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 7, 0) && defined(CONFIG_CFG80211_DEBUGFS)
 	.txpwr_table = rtw89_debug_priv_get(txpwr_table, RSIZE_20K, RLOCK),
 	.mac_mem_dump = rtw89_debug_priv_select_and_get(mac_mem_dump, RSIZE_16K, RLOCK),
@@ -4465,6 +4525,7 @@ void rtw89_debugfs_add_sec1(struct rtw89_dev *rtwdev, struct dentry *debugfs_top
 	rtw89_debugfs_add_r(stations);
 	rtw89_debugfs_add_rw(disable_dm);
 	rtw89_debugfs_add_rw(mlo_mode);
+	rtw89_debugfs_add_r(beacon_info);
 }
 
 void rtw89_debugfs_init(struct rtw89_dev *rtwdev)

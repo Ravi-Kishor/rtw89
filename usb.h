@@ -21,6 +21,10 @@
 #define RTW89_MAX_BULKIN_NUM		2
 #define RTW89_MAX_BULKOUT_NUM		7
 
+struct rtw89_usb_info {
+	u8 bulkout_id[RTW89_DMA_CH_NUM];
+};
+
 struct rtw89_usb_rx_ctrl_block {
 	struct rtw89_dev *rtwdev;
 	struct urb *rx_urb;
@@ -36,6 +40,7 @@ struct rtw89_usb_tx_ctrl_block {
 struct rtw89_usb {
 	struct rtw89_dev *rtwdev;
 	struct usb_device *udev;
+	const struct rtw89_usb_info *info;
 
 	__le32 *vendor_req_buf;
 

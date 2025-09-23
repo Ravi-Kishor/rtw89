@@ -706,41 +706,26 @@ static int rtw89_usb_ops_deinit(struct rtw89_dev *rtwdev)
 
 static int rtw89_usb_ops_mac_pre_init(struct rtw89_dev *rtwdev)
 {
-	u32 usb_host_request_2, usb_wlan0_1, hci_func_en;
+	struct rtw89_usb *rtwusb = rtw89_usb_priv(rtwdev);
+	const struct rtw89_usb_info *info = rtwusb->info;
 	u32 val32;
 
-	switch (rtwdev->chip->chip_id) {
-	case RTL8851B:
-	case RTL8852A:
-	case RTL8852B:
-		usb_host_request_2 = R_AX_USB_HOST_REQUEST_2;
-		usb_wlan0_1 = R_AX_USB_WLAN0_1;
-		hci_func_en = R_AX_HCI_FUNC_EN;
-		break;
-	case RTL8852C:
-		usb_host_request_2 = R_AX_USB_HOST_REQUEST_2_V1;
-		usb_wlan0_1 = R_AX_USB_WLAN0_1_V1;
-		hci_func_en = R_AX_HCI_FUNC_EN_V1;
-		break;
-	case RTL8922A:
-		return 0; /* Nothing to do? */
-	default:
-		rtw89_err(rtwdev, "%s: unknown chip\n", __func__);
-		return -EOPNOTSUPP;
-	}
+	if (rtwdev->chip->chip_id == RTL8922A) 
+		return 0;
 
-	rtw89_write32_set(rtwdev, usb_host_request_2, B_AX_R_USBIO_MODE);
+	rtw89_write32_set(rtwdev, info->usb_host_request_2,
+			  B_AX_R_USBIO_MODE);
 
 	/* fix USB IO hang suggest by chihhanli@realtek.com */
-	rtw89_write32_clr(rtwdev, usb_wlan0_1,
+	rtw89_write32_clr(rtwdev, info->usb_wlan0_1,
 			  B_AX_USBRX_RST | B_AX_USBTX_RST);
 
-	val32 = rtw89_read32(rtwdev, hci_func_en);
+	val32 = rtw89_read32(rtwdev, info->hci_func_en);
 	val32 &= ~(B_AX_HCI_RXDMA_EN | B_AX_HCI_TXDMA_EN);
-	rtw89_write32(rtwdev, hci_func_en, val32);
+	rtw89_write32(rtwdev, info->hci_func_en, val32);
 
 	val32 |= B_AX_HCI_RXDMA_EN | B_AX_HCI_TXDMA_EN;
-	rtw89_write32(rtwdev, hci_func_en, val32);
+	rtw89_write32(rtwdev, info->hci_func_en, val32);
 	/* fix USB TRX hang suggest by chihhanli@realtek.com */
 
 	return 0;

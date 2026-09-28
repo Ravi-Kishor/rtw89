@@ -771,6 +771,13 @@ static void rtw8852b_btc_set_rfe(struct rtw89_dev *rtwdev)
 	} else {
 		md->ant.type = BTC_ANT_SHARED;
 		md->bt0_pos = BTC_BT_BTG;
+
+		if (md->rfe_type == 41) {
+			md->ant.num = 1;
+			md->ant.single_pos = RF_PATH_B;
+			md->ant.btg_pos = RF_PATH_B;
+			md->ant.stream_cnt = 1;
+		}
 	}
 	rtwdev->btc.btg_pos = md->ant.btg_pos;
 	rtwdev->btc.ant_type = md->ant.type;

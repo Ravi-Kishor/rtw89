@@ -353,6 +353,19 @@ static const struct rtw89_btc_fbtc_mreg rtw89_btc_8852b_mon_reg[] = {
 static const u8 rtw89_btc_8852b_wl_rssi_thres[BTC_WL_RSSI_THMAX] = {70, 60, 50, 40};
 static const u8 rtw89_btc_8852b_bt_rssi_thres[BTC_BT_RSSI_THMAX] = {50, 40, 30, 20};
 
+static int rtw8852b_read_efuse(struct rtw89_dev *rtwdev, u8 *log_map,
+			       enum rtw89_efuse_block block)
+{
+	int ret;
+
+	ret = rtw8852bx_read_efuse(rtwdev, log_map, block);
+
+	if (rtwdev->efuse.rfe_type == 41)
+		set_bit(RTW89_QUIRK_1ANT, rtwdev->quirks);
+
+	return ret;
+}
+
 static void rtw8852b_pwr_sps_ana(struct rtw89_dev *rtwdev)
 {
 	struct rtw89_efuse *efuse = &rtwdev->efuse;
@@ -772,7 +785,7 @@ static void rtw8852b_btc_set_rfe(struct rtw89_dev *rtwdev)
 		md->ant.type = BTC_ANT_SHARED;
 		md->bt0_pos = BTC_BT_BTG;
 
-		if (md->rfe_type == 41) {
+		if (test_bit(RTW89_QUIRK_1ANT, rtwdev->quirks)) {
 			md->ant.num = 1;
 			md->ant.single_pos = RF_PATH_B;
 			md->ant.btg_pos = RF_PATH_B;
@@ -861,7 +874,7 @@ static const struct rtw89_chip_ops rtw8852b_chip_ops = {
 	.write_rf		= rtw89_phy_write_rf_v1,
 	.set_channel		= rtw8852b_set_channel,
 	.set_channel_help	= rtw8852b_set_channel_help,
-	.read_efuse		= rtw8852bx_read_efuse,
+	.read_efuse		= rtw8852b_read_efuse,
 	.read_phycap		= rtw8852bx_read_phycap,
 	.fem_setup		= NULL,
 	.data_setup		= NULL,

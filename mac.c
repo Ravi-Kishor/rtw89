@@ -3244,8 +3244,7 @@ static int rtw89_mac_setup_phycap_part0(struct rtw89_dev *rtwdev)
 	tx_ant = u32_get_bits(phycap->w3, RTW89_C2HREG_PHYCAP_W3_ANT_TX_NUM);
 	rx_ant = u32_get_bits(phycap->w3, RTW89_C2HREG_PHYCAP_W3_ANT_RX_NUM);
 
-	if (chip->chip_id == RTL8852B && efuse->rfe_type == 41 &&
-	    tx_nss == 1 && tx_ant == 2 && rx_nss == 1 && rx_ant == 2) {
+	if (test_bit(RTW89_QUIRK_1ANT, rtwdev->quirks)) {
 		tx_ant = 1;
 		rx_ant = 1;
 	}
